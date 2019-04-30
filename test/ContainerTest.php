@@ -67,12 +67,19 @@ class ContainerTest extends TestCase
         $this->assertInstanceOf(FooMockInterface::class, $class->getFoo());
     }
 
-    public function test_container_returns_singleton()
+    public function test_container_resolves_singleton()
     {
         $foo = $this->container->singleton(FooMockSingleton::class);
 
         $this->assertTrue($foo === $this->container->get(FooMockSingleton::class));
         $this->assertInstanceOf(BarMockDependency::class, $foo->getBar());
+    }
+
+    public function test_container_returns_singleton_instance()
+    {
+        $foo = $this->container->singleton(FooMockSingleton::class, new class {});
+
+        $this->assertTrue($foo === $this->container->get(FooMockSingleton::class));
     }
 
     public function test_container_binds_singleton_to_interface()

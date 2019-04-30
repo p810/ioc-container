@@ -116,12 +116,13 @@ class Container
     /**
      * Creates a singleton entry in the container and returns the instance
      * 
-     * @param string $className
+     * @param string      $className
+     * @param null|object $instance
      * @return object
      */
-    public function singleton(string $className): object
+    public function singleton(string $className, ?object $instance = null): object
     {
-        $instance = $this->resolver->resolve($className);
+        $instance = $instance ?? $this->resolver->resolve($className);
 
         $this->classes[$className] = [
             'isConcrete' => true,
