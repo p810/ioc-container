@@ -38,7 +38,6 @@ class ReflectionResolver implements DependencyResolverInterface
     }
 
     /**
-     * @param string                 $className
      * @param \ReflectionParameter[] $parameters
      * @param false|string           $docblock
      * @return object[]
@@ -51,11 +50,8 @@ class ReflectionResolver implements DependencyResolverInterface
         }
 
         foreach ($parameters as $key => $parameter) {
-            $instance = $this->resolveClassFromParameter($parameter);
-
-            if (! $instance && $docblock) {
-                $instance = $this->resolveClassFromDocComment($parameter->getName(), $docblock);
-            }
+            $instance = $this->resolveClassFromParameter($parameter) ??
+              ($docblock ? $this->resolveClassFromDocComment($parameter->getName(), $docblock) : null);
 
             if (! $instance) {
                 $paramName = '$' . $parameter->getName();
