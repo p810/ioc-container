@@ -4,7 +4,6 @@ namespace p810\Container;
 
 use ReflectionClass; 
 use ReflectionParameter;
-use p810\Container\UnresolvableDependencyException;
 
 use function count;
 use function sprintf;

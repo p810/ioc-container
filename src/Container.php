@@ -5,8 +5,6 @@ namespace p810\Container;
 use Closure;
 use ReflectionClass;
 use ReflectionParameter;
-use p810\Container\DependencyResolverInterface;
-use p810\Container\UnresolvableDependencyException;
 
 use function array_key_exists;
 
