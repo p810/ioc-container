@@ -21,10 +21,9 @@ class ContainerTest extends TestCase
      */
     protected $container;
 
-    function __construct()
+    public function setUp(): void
     {
         $this->container = new Container(new ReflectionResolver);
-        parent::__construct();
     }
 
     public function test_container_resolves_class_with_factory_method()
