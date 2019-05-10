@@ -2,57 +2,48 @@
 
 namespace p810\Container;
 
-use ReflectionClass; 
+use ReflectionClass;
 use ReflectionParameter;
 
-use function count;
-use function sprintf;
-use function preg_match;
-use function array_key_exists;
-
-class ReflectionResolver implements DependencyResolverInterface
+class ReflectionContainer extends Container implements Resolver
 {
-    /**
-     * @var array
-     */
-    protected $bindings = [];
-
-    /**
-     * {@inheritdoc}
-     */
-    public function resolve(string $className): object {
-        if ($this->isBound($className)) {
-            return $this->getBoundImplementation($className);
-        }
-
-        $reflector   = new ReflectionClass($className);
+    public function resolve(string $className): object
+    {
+        $entry = $this->entry($className);
+        
+        $reflector = new ReflectionClass($entry->getClassName());
         $constructor = $reflector->getConstructor();
 
         if (! $constructor) {
             return $reflector->newInstance();
         }
 
-        $dependencies = $this->getDependenciesFromConstructor(
-            $constructor->getParameters(),
-            $constructor->getDocComment()
-        );
+        $arguments = $this->getConstructorArguments($constructor->getParameters(), $constructor->getDocComment(), $entry);
 
-        return $reflector->newInstanceArgs($dependencies);
+        return $reflector->newInstanceArgs($arguments);
     }
 
     /**
-     * Iterates over the parameters in a class's constructor and attempts to resolve
-     * any classes that are hinted (docblock or native), and returns an array of the
-     * objects that were instantiated
-     * 
-     * @param \ReflectionParameter[] $parameters A list of \ReflectionParameter objects
-     * @param false|string           $docblock   The constructor's docblock, if applicable
-     * @return object[]
+     * @param \ReflectionParameter[] $parameters
+     * @param null|string $docblock
+     * @param \p810\Container\Entry $entry
      */
-    protected function getDependenciesFromConstructor(array $parameters, $docblock): array {
+    protected function getConstructorArguments(array $parameters, ?string $docblock, Entry $entry)
+    {
         $dependencies = [];
 
         foreach ($parameters as $key => $parameter) {
+            $default = $entry->getParam($parameter->getName());
+        
+            // we use a class here because hypothetically, any other value (including falsey values
+            // like null or 0) could be returned, so the only truly unique way to show that the user
+            // hasn't set a default value for this param is by using our own class
+            if (! $default instanceof UnsetDefaultParam) {
+                $dependencies[$key] = $default;
+
+                continue;
+            }
+
             $instance = $this->resolveClassFromParameter($parameter) ??
               ($docblock ? $this->resolveClassFromDocComment($parameter->getName(), $docblock) : null);
 
@@ -109,32 +100,5 @@ class ReflectionResolver implements DependencyResolverInterface
         }
 
         return $this->resolve($matches[1]);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function bind(string $interfaceName, string $className): void {
-        $this->bindings[$interfaceName] = $className;
-    }
-
-    /**
-     * Returns a boolean indicating whether the given class is bound to another
-     * 
-     * @param string $className
-     * @return bool
-     */
-    protected function isBound(string $className): bool {
-        return array_key_exists($className, $this->bindings);
-    }
-
-    /**
-     * Returns an instance of the class that's associated with the given class name
-     * 
-     * @param string $className
-     * @return object
-     */
-    protected function getBoundImplementation(string $className): object {
-        return $this->resolve($this->bindings[$className]);
     }
 }

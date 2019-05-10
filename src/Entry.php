@@ -29,6 +29,11 @@ class Entry
     protected $className;
 
     /**
+     * @var \p810\Container\UnsetDefaultParam
+     */
+    protected $missingDefaultParam;
+
+    /**
      * @param string        $className
      * @param null|callable $factory
      * @param bool          $isConcrete
@@ -45,6 +50,46 @@ class Entry
         $this->instance   = $instance;
         $this->className  = $className;
         $this->isConcrete = $isConcrete;
+
+        $this->missingDefaultParam = UnsetDefaultParam::getInstance();
+    }
+
+    /**
+     * Returns the name of the class represented by this entry
+     * 
+     * @return string
+     */
+    public function getClassName(): string
+    {
+        return $this->className;
+    }
+
+    /**
+     * Sets a default value to be used for the given param by $name
+     * 
+     * This is useful for cases like when a dependency has a scalar param
+     * 
+     * @param string $name
+     * @param mixed  $value
+     * @return self
+     */
+    public function param(string $name, $value): self
+    {
+        $this->params[$name] = $value;
+
+        return $this;
+    }
+
+    /**
+     * 
+     */
+    public function getParam(string $name)
+    {
+        if (! array_key_exists($name, $this->params)) {
+            return $this->missingDefaultParam;
+        }
+
+        return $this->params[$name];
     }
 
     /**
@@ -90,6 +135,6 @@ class Entry
      */
     protected function factoryIsResolver(): bool
     {
-        return is_array($this->factory) && is_a($this->factory[0], DependencyResolverInterface::class, true);
+        return is_array($this->factory) && is_a($this->factory[0], Resolver::class, true);
     }
 }

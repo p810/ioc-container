@@ -16,21 +16,6 @@ class Container
     protected $classes = [];
 
     /**
-     * @var \p810\Container\DependencyResolverInterface
-     */
-    protected $resolver;
-
-    /**
-     * Injects a \p810\Container\DependencyResolverInterface for the container to use to instantiate classes
-     * 
-     * @param \p810\Container\DependencyResolverInterface $resolver
-     */
-    function __construct(DependencyResolverInterface $resolver)
-    {
-        $this->resolver = $resolver;
-    }
-
-    /**
      * Returns a boolean indicating whether the container has an entry for the given class
      * 
      * @param string $className
@@ -50,9 +35,7 @@ class Container
      */
     public function get(string $className, ...$arguments): object
     {
-        $entry = $this->has($className)
-            ? $this->entry($className)
-            : $this->set($className);
+        $entry = $this->entry($className);
 
         if ($entry->isSingleton()) {
             return $entry->getInstance();
@@ -77,7 +60,7 @@ class Container
         ?object   $instance  = null): Entry
     {
         if (! $factory) {
-            $factory = [$this->resolver, 'resolve'];
+            $factory = [$this, 'resolve'];
         }
 
         $entry = $this->classes[$className] = new Entry($className, $factory, $concrete, $instance);
@@ -97,7 +80,7 @@ class Container
             return $this->classes[$className];
         }
 
-        return null;
+        return $this->set($className);
     }
 
     /**
@@ -109,7 +92,7 @@ class Container
      */
     public function singleton(string $className, ?object $instance = null): object
     {
-        $instance = $instance ?? $this->resolver->resolve($className);
+        $instance = $instance ?? $this->resolve($className);
 
         $this->set($className, null, true, $instance);
 
@@ -126,10 +109,6 @@ class Container
      */
     public function bind(string $interfaceName, string $className): void
     {
-        $this->resolver->bind($interfaceName, $className);
-
-        if (($entry = $this->entry($className)) && $entry->isSingleton()) {
-            $this->set($interfaceName, null, true, $entry->getInstance());
-        }
+        $this->classes[$interfaceName] = $this->entry($className);
     }
 }
