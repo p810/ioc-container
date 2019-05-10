@@ -2,28 +2,28 @@
 
 namespace p810\Container\Test;
 
-use p810\Container\Container;
 use PHPUnit\Framework\TestCase;
-use p810\Container\ReflectionResolver;
+use p810\Container\ReflectionContainer;
 use p810\Container\Test\Stubs\FooMockSingleton;
 use p810\Container\Test\Stubs\FooMockDependent;
 use p810\Container\Test\Stubs\FooMockInterface;
 use p810\Container\Test\Stubs\FooMockDependency;
 use p810\Container\Test\Stubs\BarMockDependency;
 use p810\Container\Test\Stubs\BamMockDependency;
+use p810\Container\Test\Stubs\QuuxMockDependency;
 use p810\Container\Test\Stubs\FooMockImplementation;
 use p810\Container\Test\Stubs\FooMockSingletonInterface;
 
 class ContainerTest extends TestCase
 {
     /**
-     * @var \p810\Container\Container
+     * @var \p810\Container\ReflectionContainer
      */
     protected $container;
 
     public function setUp(): void
     {
-        $this->container = new Container(new ReflectionResolver);
+        $this->container = new ReflectionContainer();
     }
 
     public function test_container_resolves_class_with_factory_method()
@@ -93,5 +93,17 @@ class ContainerTest extends TestCase
 
         $this->assertInstanceOf(FooMockSingleton::class, $y);
         $this->assertTrue($x === $y);
+    }
+
+    public function test_entry_has_default_argument()
+    {
+        $entry = $this->container->set(QuuxMockDependency::class);
+
+        $entry->param('message', 'Hello world!');
+
+        $instance = $this->container->get(QuuxMockDependency::class);
+
+        $this->assertInstanceOf(QuuxMockDependency::class, $instance);
+        $this->assertEquals('Hello world!', $instance->getMessage());
     }
 }
