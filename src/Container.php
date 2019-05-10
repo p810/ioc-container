@@ -74,8 +74,7 @@ class Container
         string    $className,
         ?callable $factory   = null,
         bool      $concrete  = false,
-        ?object   $instance  = null)
-        : Entry
+        ?object   $instance  = null): Entry
     {
         if (! $factory) {
             $factory = [$this->resolver, 'resolve'];
