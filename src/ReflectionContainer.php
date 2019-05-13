@@ -7,6 +7,13 @@ use ReflectionParameter;
 
 class ReflectionContainer extends Container implements Resolver
 {
+    /**
+     * Instantiates and returns an object of the given class using the Reflection API
+     * 
+     * @param string $className A fully qualified class name
+     * @return object
+     * @throws \p810\Container\UnresolvableArgumentException if one of the class's constructor's arguments could not be resolved
+     */
     public function resolve(string $className): object
     {
         $entry = $this->entry($className);
@@ -24,23 +31,25 @@ class ReflectionContainer extends Container implements Resolver
     }
 
     /**
-     * @param \ReflectionParameter[] $parameters
-     * @param null|string $docblock
-     * @param \p810\Container\Entry $entry
+     * Iterates over the parameters in a class's constructor and attempts to resolve them so the class can be
+     * instantiated by the Reflection API
+     * 
+     * @param \ReflectionParameter[] $parameters A list of \ReflectionParameter objects from a class's constructor
+     * @param null|string            $docblock   The constructor's docblock, if applicable
+     * @param \p810\Container\Entry  $entry      The \p810\Container\Entry object representing the class being instantiated
+     * @return mixed[]
+     * @throws \p810\Container\UnresolvableArgumentException if a parameter in a class's constructor could not be instantiated
      */
-    protected function getConstructorArguments(array $parameters, ?string $docblock, Entry $entry)
+    protected function getConstructorArguments(array $parameters, ?string $docblock, Entry $entry): array
     {
         $dependencies = [];
 
         foreach ($parameters as $key => $parameter) {
             $default = $entry->getParam($parameter->getName());
-        
-            // we use a class here because hypothetically, any other value (including falsey values
-            // like null or 0) could be returned, so the only truly unique way to show that the user
-            // hasn't set a default value for this param is by using our own class
+
             if (! $default instanceof UnsetDefaultParam) {
                 $dependencies[$key] = $default;
-
+                
                 continue;
             }
 
@@ -52,7 +61,7 @@ class ReflectionContainer extends Container implements Resolver
                 /** @psalm-suppress PossiblyNullReference */
                 $className = $parameter->getDeclaringClass()->getName();
 
-                throw new UnresolvableDependencyException("Failed to create $className: A constructor argument ($paramName) either could not be inferred or instantiated");
+                throw new UnresolvableArgumentException("Failed to create $className: A constructor argument ($paramName) either could not be inferred or instantiated");
             }
 
             $dependencies[$key] = $instance;
