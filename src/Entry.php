@@ -29,11 +29,6 @@ class Entry
     protected $className;
 
     /**
-     * @var \p810\Container\UnsetDefaultParam
-     */
-    protected $missingDefaultParam;
-
-    /**
      * @param string        $className
      * @param null|callable $factory
      * @param bool          $isConcrete
@@ -50,8 +45,6 @@ class Entry
         $this->instance   = $instance;
         $this->className  = $className;
         $this->isConcrete = $isConcrete;
-
-        $this->missingDefaultParam = UnsetDefaultParam::getInstance();
     }
 
     /**
@@ -81,12 +74,23 @@ class Entry
     }
 
     /**
+     * Returns the default value configured for a given parameter of the constructor in the
+     * class represented by this entry. If no default value has been specified, a singleton
+     * of \p810\Container\UnsetDefaultParam is returned.
      * 
+     * We use this singleton because a user may map a falsey value to a parameter, so we can't
+     * check for a usual inidcator of a missing value e.g. null. I felt that a try/catch looked
+     * weird, and semantically incorrect. A singleton prevents us from having to create potentially
+     * hundreds or thousands of dummy objects that just immediately get thrown aside and fits the
+     * program's flow more naturally.
+     * 
+     * @param string $name The name of the parameter in the constructor
+     * @return mixed|\p810\Container\UnsetDefaultParam
      */
     public function getParam(string $name)
     {
         if (! array_key_exists($name, $this->params)) {
-            return $this->missingDefaultParam;
+            return UnsetDefaultParam::getInstance();
         }
 
         return $this->params[$name];
