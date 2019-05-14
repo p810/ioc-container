@@ -6,9 +6,13 @@ use Closure;
 use ReflectionClass;
 use ReflectionParameter;
 
+use function is_object;
 use function array_key_exists;
 
-class Container
+/**
+ * A base class that acts as a container for classes that should be autowired by the implementing Resolver.
+ */
+abstract class Container
 {
     /**
      * @var \p810\Container\Entry[]
@@ -29,41 +33,31 @@ class Container
     /**
      * Returns an object from the container
      * 
-     * @param string $className
-     * @param array  $arguments
+     * @param string     $className The fully qualified class name to resolve
+     * @param array $arguments An optional, associative array of named arguments (params)
      * @return object
      */
-    public function get(string $className, ...$arguments): object
+    public function get(string $className, array $arguments = []): object
     {
-        $entry = $this->entry($className);
-
-        if ($entry->isSingleton()) {
-            return $entry->getInstance();
-        }
-
-        return $entry->make(...$arguments);
+        return $this->entry($className)->make($arguments);
     }
 
     /**
      * Creates a new entry in the container for the given class
      * 
-     * @param string        $className The fully qualified name of the class to be stored
-     * @param null|callable $factory   An optional callback that can be used to create the object
-     * @param bool          $concrete  Whether this is a concrete entry, i.e. a singleton instance
-     * @param null|object   $instance  An optional instance for singletons
+     * @param string        $className   The fully qualified name of the class to be stored
+     * @param null|callable $factory     An optional callback that can be used to create the object
+     * @param null|object   $instance    An optional instance for singletons
+     * @param bool          $isSingleton Whether this entry represents a singleton
      * @return \p810\Container\Entry
      */
-    public function set(
-        string    $className,
-        ?callable $factory   = null,
-        bool      $concrete  = false,
-        ?object   $instance  = null): Entry
+    public function set(string $className, ?callable $factory = null, ?object $instance = null, bool $isSingleton = false): Entry
     {
         if (! $factory) {
             $factory = [$this, 'resolve'];
         }
 
-        $entry = $this->classes[$className] = new Entry($className, $factory, $concrete, $instance);
+        $entry = $this->classes[$className] = new Entry($className, $factory, ($factory || $isSingleton), $instance);
 
         return $entry;
     }
@@ -86,17 +80,21 @@ class Container
     /**
      * Creates a singleton entry in the container and returns the instance
      * 
-     * @param string      $className
-     * @param null|object $instance
-     * @return object
+     * @param string        $className
+     * @param null|object   $instance
+     * @param null|callable $factory
+     * @param bool          $resolveNow
+     * @return \p810\Container\Entry
      */
-    public function singleton(string $className, ?object $instance = null): object
+    public function singleton(string $className, ?object $instance = null, ?callable $factory = null, bool $resolveNow = false): Entry
     {
-        $instance = $instance ?? $this->resolve($className);
+        $entry = $this->set($className, $factory, $instance, true);
 
-        $this->set($className, null, true, $instance);
+        if (! $instance && $resolveNow) {
+            $entry->make();
+        }
 
-        return $instance;
+        return $entry;
     }
 
     /**
