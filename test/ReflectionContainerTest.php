@@ -45,6 +45,19 @@ class ContainerTest extends TestCase
         $this->assertInstanceOf(FooMockDependency::class, $bar->getFoo());
     }
 
+    public function test_container_resolves_class_with_arguments()
+    {
+        $this->container->set(BarMockDependency::class);
+
+        $foo = new FooMockDependency;
+        $foo->id = 1;
+
+        $bar = $this->container->get(BarMockDependency::class, ['foo' => $foo]);
+
+        $this->assertInstanceOf(FooMockDependency::class, $bar->getFoo());
+        $this->assertEquals(1, $bar->getFoo()->id);
+    }
+
     public function test_container_resolves_class_from_doccomment()
     {
         $this->container->set(BamMockDependency::class);
@@ -69,7 +82,9 @@ class ContainerTest extends TestCase
 
     public function test_container_resolves_singleton()
     {
-        $foo = $this->container->singleton(FooMockSingleton::class);
+        $entry = $this->container->singleton(FooMockSingleton::class, null, null, true);
+
+        $foo = $entry->getInstance();
 
         $this->assertTrue($foo === $this->container->get(FooMockSingleton::class));
         $this->assertInstanceOf(BarMockDependency::class, $foo->getBar());
@@ -77,7 +92,9 @@ class ContainerTest extends TestCase
 
     public function test_container_returns_singleton_instance()
     {
-        $foo = $this->container->singleton(FooMockSingleton::class, new class {});
+        $entry = $this->container->singleton(FooMockSingleton::class, new class {});
+
+        $foo = $entry->getInstance();
 
         $this->assertTrue($foo === $this->container->get(FooMockSingleton::class));
     }
