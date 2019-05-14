@@ -14,6 +14,9 @@ use p810\Container\Test\Stubs\QuuxMockDependency;
 use p810\Container\Test\Stubs\FooMockImplementation;
 use p810\Container\Test\Stubs\FooMockSingletonInterface;
 
+use function md5;
+use function microtime;
+
 class ContainerTest extends TestCase
 {
     /**
@@ -45,17 +48,30 @@ class ContainerTest extends TestCase
         $this->assertInstanceOf(FooMockDependency::class, $bar->getFoo());
     }
 
-    public function test_container_resolves_class_with_arguments()
+    public function test_container_resolves_class_with_named_arguments()
     {
         $this->container->set(BarMockDependency::class);
 
         $foo = new FooMockDependency;
-        $foo->id = 1;
+        $id = $foo->id = md5(microtime(true));
 
         $bar = $this->container->get(BarMockDependency::class, ['foo' => $foo]);
 
         $this->assertInstanceOf(FooMockDependency::class, $bar->getFoo());
-        $this->assertEquals(1, $bar->getFoo()->id);
+        $this->assertEquals($id, $bar->getFoo()->id);
+    }
+
+    public function test_container_resolves_class_with_argument_list()
+    {
+        $this->container->set(BarMockDependency::class);
+
+        $foo = new FooMockDependency;
+        $id = $foo->id = md5(microtime(true));
+
+        $bar = $this->container->get(BarMockDependency::class, $foo);
+
+        $this->assertInstanceOf(FooMockDependency::class, $bar->getFoo());
+        $this->assertEquals($id, $bar->getFoo()->id);
     }
 
     public function test_container_resolves_class_from_doccomment()

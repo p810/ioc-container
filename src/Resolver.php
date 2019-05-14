@@ -14,5 +14,5 @@ interface Resolver
      * @param null|array $arguments
      * @return object
      */
-    public function resolve(string $className, array $arguments = []): object;
+    public function resolve(string $className, ...$arguments): object;
 }

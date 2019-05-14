@@ -14,11 +14,11 @@ class ReflectionContainer extends Container implements Resolver
      * Instantiates and returns an object of the given class using the Reflection API
      * 
      * @param string $className A fully qualified class name
-     * @param array  $arguments An optional, associative array of named arguments (params)
+     * @param array  $arguments Optional arguments for the constructor of the class being resolved
      * @return object
      * @throws \p810\Container\UnresolvableArgumentException if one of the class's constructor's arguments could not be resolved
      */
-    public function resolve(string $className, array $arguments = []): object
+    public function resolve(string $className, ...$arguments): object
     {
         $entry = $this->entry($className);
         
@@ -40,47 +40,60 @@ class ReflectionContainer extends Container implements Resolver
      * 
      * @param \ReflectionParameter[] $parameters A list of \ReflectionParameter objects from a class's constructor
      * @param \p810\Container\Entry  $entry      The \p810\Container\Entry object representing the class being instantiated
-     * @param array                  $arguments  An optional, associative array of named parameters
+     * @param array                  $arguments  Optional default arguments for the constructor
      * @param null|string            $docblock   The constructor's docblock, if applicable
      * @return mixed[]
      * @throws \p810\Container\UnresolvableArgumentException if a parameter in a class's constructor could not be instantiated
      */
     protected function getConstructorArguments(array $parameters, Entry $entry, array $arguments, ?string $docblock): array
     {
+        $i = 0;
         $dependencies = [];
 
         foreach ($parameters as $key => $parameter) {
             $name = $parameter->getName();
+            $value = $this->getDefaultArgument($name, $i, $entry, $arguments);
 
-            if (array_key_exists($name, $arguments)) {
-                $dependencies[$key] = $arguments[$name];
-
-                continue;
+            if ($value instanceof MissingDefaultParameter) {
+                $value = $this->resolveClassFromParameter($parameter)
+                    ?? ($docblock ? $this->resolveClassFromDocComment($parameter->getName(), $docblock) : null);
+  
+                if (! $value) {
+                    throw new UnresolvableArgumentException("A constructor argument ({$parameter->getName()}) could not be resolved to a usable value");
+                }
             }
 
-            $default = $entry->getParam($name);
-
-            if (! $default instanceof UnsetDefaultParam) {
-                $dependencies[$key] = $default;
-                
-                continue;
-            }
-
-            $instance = $this->resolveClassFromParameter($parameter) ??
-              ($docblock ? $this->resolveClassFromDocComment($parameter->getName(), $docblock) : null);
-
-            if (! $instance) {
-                $paramName = '$' . $parameter->getName();
-                /** @psalm-suppress PossiblyNullReference */
-                $className = $parameter->getDeclaringClass()->getName();
-
-                throw new UnresolvableArgumentException("Failed to create $className: A constructor argument ($paramName) either could not be inferred or instantiated");
-            }
-
-            $dependencies[$key] = $instance;
+            ++$i;
+            $dependencies[$key] = $value;
         }
 
         return $dependencies;
+    }
+
+    /**
+     * @param string                $name
+     * @param int                   $index
+     * @param \p810\Container\Entry $entry
+     * @param array                 $arguments
+     * @return mixed|\p810\Container\MissingDefaultParameter
+     */
+    protected function getDefaultArgument(string $name, int $index, Entry $entry, array $arguments)
+    {
+        if ($arguments) {
+            if (
+                count($arguments) === 1 &&
+                is_array($arguments[0]) &&
+                array_key_exists($name, $arguments[0])
+            ) {
+                return $arguments[0][$name];
+            }
+
+            if (array_key_exists($index, $arguments)) {
+                return $arguments[$index];
+            }
+        }
+
+        return $entry->getParam($name);
     }
 
     /**

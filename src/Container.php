@@ -33,11 +33,11 @@ abstract class Container
     /**
      * Returns an object from the container
      * 
-     * @param string     $className The fully qualified class name to resolve
-     * @param array $arguments An optional, associative array of named arguments (params)
+     * @param string $className The fully qualified class name to resolve
+     * @param array  $arguments An optional array of arguments for the $className's constructor
      * @return object
      */
-    public function get(string $className, array $arguments = []): object
+    public function get(string $className, ...$arguments): object
     {
         return $this->entry($className)->make($arguments);
     }

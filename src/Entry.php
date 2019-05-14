@@ -33,6 +33,11 @@ class Entry
     protected $isSingleton;
 
     /**
+     * @var array
+     */
+    protected $params = [];
+
+    /**
      * @param string        $className
      * @param null|callable $factory
      * @param bool          $isSingleton
@@ -100,12 +105,12 @@ class Entry
      * program's flow more naturally.
      * 
      * @param string $name The name of the parameter in the constructor
-     * @return mixed|\p810\Container\UnsetDefaultParam
+     * @return mixed|\p810\Container\MissingDefaultParameter
      */
     public function getParam(string $name)
     {
         if (! array_key_exists($name, $this->params)) {
-            return UnsetDefaultParam::getInstance();
+            return MissingDefaultParameter::getInstance();
         }
 
         return $this->params[$name];
@@ -114,7 +119,7 @@ class Entry
     /**
      * Returns an instance of the injected class
      * 
-     * @param array $arguments An optional, associative array of named arguments (params)
+     * @param array $arguments An optional array of arguments for the class's constructor
      * @return object
      */
     public function make(array $arguments = []): object
@@ -122,13 +127,11 @@ class Entry
         $instance = $this->getInstance();
 
         if ($instance === null) {
-            $args = [$arguments];
-            
             if ($this->factoryIsResolver()) {
-                array_unshift($args, $this->className);
+                array_unshift($arguments, $this->className);
             }
     
-            $instance = ($this->factory)(...$args);
+            $instance = ($this->factory)(...$arguments);
     
             if ($this->isSingleton()) {
                 $this->instance = $instance;
