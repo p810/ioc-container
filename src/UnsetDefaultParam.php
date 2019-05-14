@@ -3,8 +3,7 @@
 namespace p810\Container;
 
 /**
- * Represents a case where a user has not specified a default value for a parameter in
- * an object's constructor
+ * Represents a case where a user has not specified a default value for a parameter in an object's constructor.
  */
 class UnsetDefaultParam
 {
