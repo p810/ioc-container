@@ -57,19 +57,38 @@ $container->singleton(Foo::class, null, function (): Foo {
 }, true);
 ```
 
-### Getting classes from the container
-A class can be resolved from the container by calling `p810\Container\Container::get()`. All it requires is a fully qualified class name; an optional, associative array of named arguments may be supplied by proxy to the factory callback for the requested class.
+### Getting objects from the container
+A class can be resolved from the container by calling `p810\Container\Container::get()`. The `Resolver` will attempt to automatically resolve any type hinted classes it finds in the class's constructor, either in the method signature or as an `@param` annotation in its docblock.
 
 ```php
-// these two calls are equivalent, since the container is able to autowire
-// Foo's dependencies. however, if a parameter was encountered that was a.)
-// not an object and b.) did not have a default value set in the signature
-// or by the Entry object (explained below), it would need to be passed to
-// get() after the FQCN or an UnresolvableArgumentException would be raised.
+class Foo {
+    /**
+     * @param Bar $bar
+     * @param Bam $bam
+     */
+    function __construct(Bar $bar, $bam) {
+        $this->bar = $bar;
+        $this->bam = $bam;
+    }
+}
 
-$container->get(Foo::class);
-$container->get(Foo::class, ['bar' => new Bar]);
+$foo = $container->get(Foo::class);
 ```
+
+Default arguments may be passed to `p810\Container\Container::get()` after the name of the class being resolved. If an associative array is the only given argument after the class name, it will be treated as a dictionary of named parameters; otherwise values will be looked up numerically.
+
+```php
+// this:
+$foo = $container->get(Foo::class, [
+    'bam' => new Bam,
+    'bar' => new Bar
+]);
+
+// is the same as this:
+$foo = $container->get(Foo::class, new Bar, new Bam);
+```
+
+Argument values may also be bound to the `p810\Container\Entry` instance for a given class.
 
 ### Specifying default values for parameters
 `p810\Container\Entry::param()` allows you to bind values to parameters of your constructor by name:
