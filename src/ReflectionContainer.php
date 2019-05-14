@@ -5,16 +5,20 @@ namespace p810\Container;
 use ReflectionClass;
 use ReflectionParameter;
 
+use function sprintf;
+use function preg_match;
+
 class ReflectionContainer extends Container implements Resolver
 {
     /**
      * Instantiates and returns an object of the given class using the Reflection API
      * 
      * @param string $className A fully qualified class name
+     * @param array  $arguments An optional, associative array of named arguments (params)
      * @return object
      * @throws \p810\Container\UnresolvableArgumentException if one of the class's constructor's arguments could not be resolved
      */
-    public function resolve(string $className): object
+    public function resolve(string $className, array $arguments = []): object
     {
         $entry = $this->entry($className);
         
@@ -25,7 +29,7 @@ class ReflectionContainer extends Container implements Resolver
             return $reflector->newInstance();
         }
 
-        $arguments = $this->getConstructorArguments($constructor->getParameters(), $constructor->getDocComment(), $entry);
+        $arguments = $this->getConstructorArguments($constructor->getParameters(), $entry, $arguments, $constructor->getDocComment());
 
         return $reflector->newInstanceArgs($arguments);
     }
@@ -35,17 +39,26 @@ class ReflectionContainer extends Container implements Resolver
      * instantiated by the Reflection API
      * 
      * @param \ReflectionParameter[] $parameters A list of \ReflectionParameter objects from a class's constructor
-     * @param null|string            $docblock   The constructor's docblock, if applicable
      * @param \p810\Container\Entry  $entry      The \p810\Container\Entry object representing the class being instantiated
+     * @param array                  $arguments  An optional, associative array of named parameters
+     * @param null|string            $docblock   The constructor's docblock, if applicable
      * @return mixed[]
      * @throws \p810\Container\UnresolvableArgumentException if a parameter in a class's constructor could not be instantiated
      */
-    protected function getConstructorArguments(array $parameters, ?string $docblock, Entry $entry): array
+    protected function getConstructorArguments(array $parameters, Entry $entry, array $arguments, ?string $docblock): array
     {
         $dependencies = [];
 
         foreach ($parameters as $key => $parameter) {
-            $default = $entry->getParam($parameter->getName());
+            $name = $parameter->getName();
+
+            if (array_key_exists($name, $arguments)) {
+                $dependencies[$key] = $arguments[$name];
+
+                continue;
+            }
+
+            $default = $entry->getParam($name);
 
             if (! $default instanceof UnsetDefaultParam) {
                 $dependencies[$key] = $default;
@@ -77,7 +90,8 @@ class ReflectionContainer extends Container implements Resolver
      * @param \ReflectionParameter $parameter
      * @return null|object
      */
-    protected function resolveClassFromParameter(ReflectionParameter $parameter): ?object {
+    protected function resolveClassFromParameter(ReflectionParameter $parameter): ?object
+    {
         $class = $parameter->getClass();
 
         if (! $class) {
@@ -100,7 +114,8 @@ class ReflectionContainer extends Container implements Resolver
      *                              returned from this method
      * @return null|object
      */
-    protected function resolveClassFromDocComment(string $parameterName, string $comment): ?object {
+    protected function resolveClassFromDocComment(string $parameterName, string $comment): ?object
+    {
         $pattern = sprintf('/\s*@param\s*([A-Za-z0-9\\\_]+)\s*\$%s/', $parameterName);
         $matched = preg_match($pattern, $comment, $matches);
 

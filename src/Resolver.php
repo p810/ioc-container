@@ -10,8 +10,9 @@ interface Resolver
     /**
      * Instantiates a class and its dependencies
      * 
-     * @param string $className
+     * @param string     $className
+     * @param null|array $arguments
      * @return object
      */
-    public function resolve(string $className): object;
+    public function resolve(string $className, array $arguments = []): object;
 }
