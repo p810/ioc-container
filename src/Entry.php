@@ -5,14 +5,13 @@ namespace p810\Container;
 use function is_a;
 use function is_array;
 use function array_unshift;
+use function array_key_exists;
 
+/**
+ * Represents an item in `p810\Container\Container`, i.e. a resolvable class.
+ */
 class Entry
 {
-    /**
-     * @var bool
-     */
-    protected $isConcrete;
-
     /**
      * @var callable
      */
@@ -29,22 +28,23 @@ class Entry
     protected $className;
 
     /**
+     * @var bool
+     */
+    protected $isSingleton;
+
+    /**
      * @param string        $className
      * @param null|callable $factory
-     * @param bool          $isConcrete
+     * @param bool          $isSingleton
      * @param null|object   $instance
      * @return void
      */
-    function __construct(
-        string    $className,
-        ?callable $factory    = null,
-        bool      $isConcrete = false,
-        ?object   $instance   = null)
+    function __construct(string $className, ?callable $factory = null, bool $isSingleton = false, ?object $instance = null)
     {
-        $this->factory    = $factory;
-        $this->instance   = $instance;
-        $this->className  = $className;
-        $this->isConcrete = $isConcrete;
+        $this->factory     = $factory;
+        $this->instance    = $instance;
+        $this->className   = $className;
+        $this->isSingleton = $isSingleton;
     }
 
     /**
@@ -62,13 +62,28 @@ class Entry
      * 
      * This is useful for cases like when a dependency has a scalar param
      * 
-     * @param string $name
-     * @param mixed  $value
+     * @param string $name  The variable name of the parameter to bind
+     * @param mixed  $value Any value to use for the paramter when resolving the class
      * @return self
      */
     public function param(string $name, $value): self
     {
         $this->params[$name] = $value;
+
+        return $this;
+    }
+
+    /**
+     * Sets default values for multiple parameters in a constructor's signature
+     * 
+     * @param array $parameters An associative array mapping param names to their desired default values
+     * @return self
+     */
+    public function params(array $parameters): self
+    {
+        foreach ($parameters as $name => $value) {
+            $this->param($name, $value);
+        }
 
         return $this;
     }
@@ -99,16 +114,28 @@ class Entry
     /**
      * Returns an instance of the injected class
      * 
-     * @param array $arguments
+     * @param array $arguments An optional, associative array of named arguments (params)
      * @return object
      */
-    public function make(...$arguments): object
+    public function make(array $arguments = []): object
     {
-        if ($this->factoryIsResolver()) {
-            array_unshift($arguments, $this->className);
+        $instance = $this->getInstance();
+
+        if ($instance === null) {
+            $args = [$arguments];
+            
+            if ($this->factoryIsResolver()) {
+                array_unshift($args, $this->className);
+            }
+    
+            $instance = ($this->factory)(...$args);
+    
+            if ($this->isSingleton()) {
+                $this->instance = $instance;
+            }
         }
 
-        return ($this->factory)(...$arguments);
+        return $instance;
     }
 
     /**
@@ -118,7 +145,7 @@ class Entry
      */
     public function isSingleton(): bool
     {
-        return $this->isConcrete;
+        return $this->isSingleton;
     }
 
     /**
