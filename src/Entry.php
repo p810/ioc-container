@@ -162,8 +162,7 @@ class Entry
     }
 
     /**
-     * Returns a boolean indicating whether the given callback is a class that implements
-     * \p810\Container\DependencyResolverInterface
+     * Returns a boolean indicating whether the given callback is a class that implements \p810\Container\Resolver
      * 
      * @return bool
      */

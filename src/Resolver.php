@@ -10,8 +10,8 @@ interface Resolver
     /**
      * Instantiates a class and its dependencies
      * 
-     * @param string     $className
-     * @param null|array $arguments
+     * @param string     $className The fully qualified class name to resolve
+     * @param null|array $arguments An optional array of arguments for the constructor of the class being resolved
      * @return object
      */
     public function resolve(string $className, ...$arguments): object;

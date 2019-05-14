@@ -5,8 +5,11 @@ namespace p810\Container;
 use ReflectionClass;
 use ReflectionParameter;
 
+use function count;
 use function sprintf;
+use function is_array;
 use function preg_match;
+use function array_key_exists;
 
 class ReflectionContainer extends Container implements Resolver
 {
